@@ -36,8 +36,8 @@ const createContact = async (req, res) => {
                 const secondaryContacts = await prisma.contact.findMany({ where: { linkedId: primaryContact.id } });
 
 
-                const uniqueEmails = new Set([primaryContact.email].concat(secondaryContacts.map(contact => contact.email).filter(email => email !== null)));
-                const uniquePhoneNumbers = new Set([primaryContact.phoneNumber].concat(secondaryContacts.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
+                const uniqueEmails = new Set((primaryContact.email ? [primaryContact.email] : []).concat(secondaryContacts.map(contact => contact.email).filter(email => email !== null)));
+                const uniquePhoneNumbers = new Set((primaryContact.phoneNumber ? [primaryContact.phoneNumber] : []).concat(secondaryContacts.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
 
                 return res.status(200).json({
                     message: 'Contact already exists',
@@ -51,33 +51,41 @@ const createContact = async (req, res) => {
             }
 
             // If the email and phoneNumber refers to different primary contacts
-            if (existingEmail.linkPrecedence === "primary" && existingPhoneNumber.linkPrecedence === "primary") {
-                const primaryContact = existingEmail.createdAt < existingPhoneNumber.createdAt ? existingEmail : existingPhoneNumber;
-                const secondaryContact = existingEmail.createdAt < existingPhoneNumber.createdAt ? existingPhoneNumber : existingEmail;
+            const allContacts = await prisma.contact.findMany({where: {
+                OR: [
+                    {email: email},
+                    {phoneNumber: phoneNumber}
+                ]
+            }})
+            const primaryContact = allContacts[0];
+            const secondaryContacts = allContacts.slice(1);
 
-                await prisma.contact.updateMany({
-                    where: { OR: [{ id: secondaryContact.id }, { linkedId: secondaryContact.id }] },
-                    data: {
-                        linkPrecedence: "secondary",
-                        linkedId: primaryContact.id
-                    }
-                });
+            secondaryContacts.forEach(async (contact) => {
+                if (contact.linkedId !== primaryContact.id) {
+                    await prisma.contact.updateMany({
+                        where: { id: contact.id },
+                        data: {
+                            linkPrecedence: "secondary",
+                            linkedId: primaryContact.id
+                        }
+                    });
+                }
+            });
 
-                const updatedSecondaries = await prisma.contact.findMany({ where: { linkedId: primaryContact.id } });
 
-                const uniqueEmails = new Set([primaryContact.email].concat(updatedSecondaries.map(contact => contact.email).filter(email => email !== null)));
-                const uniquePhoneNumbers = new Set([primaryContact.phoneNumber].concat(updatedSecondaries.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
+            const uniqueEmails = new Set((primaryContact.email ? [primaryContact.email] : []).concat(secondaryContacts.map(contact => contact.email).filter(email => email !== null)));
+            const uniquePhoneNumbers = new Set((primaryContact.phoneNumber ? [primaryContact.phoneNumber] : []).concat(secondaryContacts.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
 
-                return res.status(200).json({
-                    contact: {
-                        "primaryContactId": primaryContact.id,
-                        "emails": Array.from(uniqueEmails),
-                        "phoneNumbers": Array.from(uniquePhoneNumbers),
-                        "secondaryContactIds": updatedSecondaries.map(contact => contact.id)
-                    }
-                });
-            }
+            return res.status(200).json({
+                contact: {
+                    "primaryContactId": primaryContact.id,
+                    "emails": Array.from(uniqueEmails),
+                    "phoneNumbers": Array.from(uniquePhoneNumbers),
+                    "secondaryContactIds": secondaryContacts.map(contact => contact.id)
+                }
+            });
         }
+
 
         // Case where either email or phoneNumber exists
         if (existingEmail || existingPhoneNumber) {
@@ -87,7 +95,7 @@ const createContact = async (req, res) => {
 
             const secondaryContacts = await prisma.contact.findMany({ where: { linkedId: primaryContact.id } });
 
-            
+
             const uniqueEmails = new Set([primaryContact.email].concat(secondaryContacts.map(contact => contact.email).filter(email => email !== null)));
             const uniquePhoneNumbers = new Set([primaryContact.phoneNumber].concat(secondaryContacts.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
 
@@ -134,8 +142,8 @@ const createContact = async (req, res) => {
         return res.status(200).json({
             contact: {
                 "primaryContactId": newUser.id,
-                "emails": [newUser.email],
-                "phoneNumbers": [newUser.phoneNumber],
+                "emails": newUser.email ? [newUser.email] : [],
+                "phoneNumbers": newUser.phoneNumber ? [newUser.phoneNumber] : [],
                 "secondaryContactIds": []
             }
         });

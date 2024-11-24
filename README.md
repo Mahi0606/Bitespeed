@@ -5,18 +5,23 @@ Tech Stack:
   Database: MySQL
   ORM: Prisma
 
-Endpoints:
-  1. "api/identify" [POST]
-  This endpoint receives an email and/or phone number, consolidates the contact information, and returns a unified contact response.
-  
-  Request Body (json)
 
-  {
-      "email": "string (optional)",
-      "phoneNumber": "string (optional)"
-  }
+Endpoints:
+    1. "api/identify" [POST]
+        This endpoint receives an email and/or phone number, consolidates the contact information, and returns a unified contact response.
+
+            Request Body (json)
+            {
+                "email": "string (optional)",
+                "phoneNumber": "string (optional)"
+            }
+
+            At least one of email or phoneNumber is required.
+
+    2. "api/allContacts" [GET]
+        This endpoint returns all contacts in the database.
   
-  At least one of email or phoneNumber is required.
+  
 
 
 Project Structure:
@@ -24,9 +29,10 @@ Project Structure:
       ├── config/
       │   └── db.js            # Prisma database configuration
       ├── controllers/
-      │   └── contactController.js  # Contact handling logic
+      │   └── allContacts.js  # Contact handling logic
+          └── identify.js
       ├── routes/
-      │   └── contactRoutes.js  # API routes for contact management
+      │   └── identifyRoutes.js  # API routes for contact management
       ├── prisma/
       │   └── schema.prisma     # Prisma schema for database
       ├── app.js                # Express app initialization
