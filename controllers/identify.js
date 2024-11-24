@@ -42,10 +42,10 @@ const createContact = async (req, res) => {
                 return res.status(200).json({
                     message: 'Contact already exists',
                     contact: {
-                        primaryContactId: primaryContact.id,
-                        emails: Array.from(uniqueEmails),
-                        phoneNumbers: Array.from(uniquePhoneNumbers),
-                        secondaryContactIds: secondaryContacts.map(contact => contact.id)
+                        "primaryContactId": primaryContact.id,
+                        "emails": Array.from(uniqueEmails),
+                        "phoneNumbers": Array.from(uniquePhoneNumbers),
+                        "secondaryContactIds": secondaryContacts.map(contact => contact.id)
                     }
                 });
             }
@@ -70,10 +70,10 @@ const createContact = async (req, res) => {
 
                 return res.status(200).json({
                     contact: {
-                        primaryContactId: primaryContact.id,
-                        emails: Array.from(uniqueEmails),
-                        phoneNumbers: Array.from(uniquePhoneNumbers),
-                        secondaryContactIds: updatedSecondaries.map(contact => contact.id)
+                        "primaryContactId": primaryContact.id,
+                        "emails": Array.from(uniqueEmails),
+                        "phoneNumbers": Array.from(uniquePhoneNumbers),
+                        "secondaryContactIds": updatedSecondaries.map(contact => contact.id)
                     }
                 });
             }
@@ -87,36 +87,56 @@ const createContact = async (req, res) => {
 
             const secondaryContacts = await prisma.contact.findMany({ where: { linkedId: primaryContact.id } });
 
-            // Remove duplicate emails and phone numbers
+            
             const uniqueEmails = new Set([primaryContact.email].concat(secondaryContacts.map(contact => contact.email).filter(email => email !== null)));
             const uniquePhoneNumbers = new Set([primaryContact.phoneNumber].concat(secondaryContacts.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
 
-            return res.status(200).json({
-                message: 'Contact already exists',
-                contact: {
-                    primaryContactId: primaryContact.id,
-                    emails: Array.from(uniqueEmails),
-                    phoneNumbers: Array.from(uniquePhoneNumbers),
-                    secondaryContactIds: secondaryContacts.map(contact => contact.id)
+            if (!email || !phoneNumber) {
+                return res.status(200).json({
+                    message: 'Contact already exists',
+                    contact: {
+                        "primaryContactId": primaryContact.id,
+                        "emails": Array.from(uniqueEmails),
+                        "phoneNumbers": Array.from(uniquePhoneNumbers),
+                        "secondaryContactIds": secondaryContacts.map(contact => contact.id)
+                    }
+                });
+            }
+
+            const newUser = await prisma.contact.create({
+                data: {
+                    "email": email,
+                    "phoneNumber": phoneNumber,
+                    "linkPrecedence": "secondary",
+                    "linkedId": primaryContact.id
                 }
-            });
+            })
+
+            return res.status(200).json({
+                contact: {
+                    "primaryContactId": primaryContact.id,
+                    "emails": Array.from(uniqueEmails).concat(!existingEmail ? newUser.email : []),
+                    "phoneNumbers": Array.from(uniquePhoneNumbers).concat(!existingPhoneNumber ? newUser.phoneNumber : []),
+                    "secondaryContactIds": secondaryContacts.map(contact => contact.id).concat(newUser.id)
+                }
+            })
         }
 
-        // If no existing contact, create a new primary contact
+        // If no existing contact, creating a new primary contact
         const newUser = await prisma.contact.create({
             data: {
-                email: email,
-                phoneNumber: phoneNumber,
-                linkPrecedence: "primary"
+                "email": email,
+                "phoneNumber": phoneNumber,
+                "linkPrecedence": "primary"
             }
         });
 
         return res.status(200).json({
             contact: {
-                primaryContactId: newUser.id,
-                emails: [newUser.email],
-                phoneNumbers: [newUser.phoneNumber],
-                secondaryContactIds: []
+                "primaryContactId": newUser.id,
+                "emails": [newUser.email],
+                "phoneNumbers": [newUser.phoneNumber],
+                "secondaryContactIds": []
             }
         });
 
