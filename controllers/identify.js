@@ -96,8 +96,8 @@ const createContact = async (req, res) => {
             const secondaryContacts = await prisma.contact.findMany({ where: { linkedId: primaryContact.id } });
 
 
-            const uniqueEmails = new Set([primaryContact.email].concat(secondaryContacts.map(contact => contact.email).filter(email => email !== null)));
-            const uniquePhoneNumbers = new Set([primaryContact.phoneNumber].concat(secondaryContacts.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
+            const uniqueEmails = new Set((primaryContact.email ? [primaryContact.email] : []).concat(secondaryContacts.map(contact => contact.email).filter(email => email !== null)));
+            const uniquePhoneNumbers = new Set((primaryContact.phoneNumber ? [primaryContact.phoneNumber] : []).concat(secondaryContacts.map(contact => contact.phoneNumber).filter(phone => phone !== null)));
 
             if (!email || !phoneNumber) {
                 return res.status(200).json({
